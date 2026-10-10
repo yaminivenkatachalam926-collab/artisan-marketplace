@@ -60,6 +60,11 @@ export default function Navbar() {
             </NavLink>
           )}
 
+          {/* Universal Dashboard link for everyone */}
+          <NavLink to="/dashboard" className={({ isActive }) => `nav-item nav-dashboard-link ${isActive ? 'active' : ''}`}>
+            📊 Dashboard
+          </NavLink>
+
           {user ? (
             <div className="nav-user-cluster">
               <div className="nav-user-badge" title={`Signed in as ${user.email}`}>
@@ -69,9 +74,16 @@ export default function Navbar() {
               <span className={`role-badge role-${user.role}`}>
                 {user.role === 'artisan' ? '🏺 Maker' : user.role === 'admin' ? '🛡️ Admin' : '🛍️ Buyer'}
               </span>
-              <NavLink to={home} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                {user.role === 'customer' ? 'My Orders' : 'Dashboard'}
-              </NavLink>
+              {user.role === 'customer' && (
+                <NavLink to="/orders" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                  📦 Orders
+                </NavLink>
+              )}
+              {user.role === 'admin' && (
+                <NavLink to="/artisan" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                  🏺 Artisan Portal
+                </NavLink>
+              )}
               <button
                 type="button"
                 className="btn-logout"

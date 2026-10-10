@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
@@ -14,6 +14,29 @@ import Checkout from './pages/Checkout';
 import MyOrders from './pages/MyOrders';
 import ArtisanDashboard from './pages/ArtisanDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import { useAuth } from './context/AuthContext';
+
+function DashboardRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="container loading-state" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="spinner"></div>
+        <p>Opening Dashboard…</p>
+      </div>
+    );
+  }
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (user.role === 'artisan') {
+    return <Navigate to="/artisan" replace />;
+  }
+  if (user.role === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
+  return <Navigate to="/orders" replace />;
+}
 
 export default function App() {
   return (
@@ -30,6 +53,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/dashboard" element={<DashboardRedirect />} />
           <Route path="/checkout" element={<Protected role="customer"><Checkout /></Protected>} />
           <Route path="/orders" element={<Protected role="customer"><MyOrders /></Protected>} />
           <Route path="/artisan" element={<Protected role="artisan"><ArtisanDashboard /></Protected>} />
@@ -41,3 +65,4 @@ export default function App() {
     </div>
   );
 }
+

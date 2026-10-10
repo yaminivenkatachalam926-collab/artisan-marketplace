@@ -14,6 +14,13 @@ const FALLBACK_STATS = {
   products: 8,
   orders: 12,
   revenue: 28450,
+  byCategory: [
+    { category: 'Basketry', count: 2 },
+    { category: 'Pottery', count: 2 },
+    { category: 'Metalwork', count: 2 },
+    { category: 'Textiles', count: 1 },
+    { category: 'Woodwork', count: 1 },
+  ],
   breakdown: [
     { _id: 'Basketry', count: 2 },
     { _id: 'Pottery', count: 2 },
@@ -23,30 +30,107 @@ const FALLBACK_STATS = {
   ],
 };
 
+const FALLBACK_USERS = [
+  {
+    _id: 'seed_admin_01',
+    name: 'Platform Administrator',
+    email: 'admin@artisan.local',
+    role: 'admin',
+    createdAt: new Date('2026-01-15').toISOString(),
+    isBlocked: false,
+  },
+  {
+    _id: 'seed_art_01',
+    name: 'Meena Devi',
+    email: 'meena@artisan.local',
+    role: 'artisan',
+    createdAt: new Date('2026-02-10').toISOString(),
+    isBlocked: false,
+  },
+  {
+    _id: 'seed_cust_01',
+    name: 'Rahul Sharma',
+    email: 'rahul@customer.local',
+    role: 'customer',
+    createdAt: new Date('2026-03-01').toISOString(),
+    isBlocked: false,
+  },
+  {
+    _id: 'seed_art_02',
+    name: 'Rajesh Prajapati',
+    email: 'rajesh@artisan.local',
+    role: 'artisan',
+    createdAt: new Date('2026-02-18').toISOString(),
+    isBlocked: false,
+  },
+  {
+    _id: 'seed_art_03',
+    name: 'Ananya Sen',
+    email: 'ananya@artisan.local',
+    role: 'artisan',
+    createdAt: new Date('2026-02-25').toISOString(),
+    isBlocked: false,
+  },
+];
+
+const FALLBACK_ORDERS = [
+  {
+    _id: 'ord_adm_101',
+    customer: { name: 'Rahul Sharma', email: 'rahul@customer.local' },
+    items: [{ title: 'Handwoven Palm Leaf Fruit Basket' }],
+    total: 850,
+    createdAt: new Date('2026-03-28').toISOString(),
+  },
+  {
+    _id: 'ord_adm_102',
+    customer: { name: 'Priya Sundaram', email: 'priya@gmail.com' },
+    items: [{ title: 'Chettinad Sikki Grass Planter' }, { title: 'Terracotta Chai Cups (Set of 4)' }],
+    total: 2150,
+    createdAt: new Date('2026-04-01').toISOString(),
+  },
+];
+
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [tab, setTab] = useState('overview');
   const [stats, setStats] = useState(FALLBACK_STATS);
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState(FALLBACK_USERS);
   const [products, setProducts] = useState(MOCK_PRODUCTS);
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState(FALLBACK_ORDERS);
   const [loading, setLoading] = useState(false);
   const { addToast } = useToast();
 
   const loadAll = () => {
     setLoading(true);
     Promise.all([
-      api.get('/admin/stats').then((r) => { if (r?.data?.revenue !== undefined) setStats(r.data); }),
-      api.get('/admin/users').then((r) => { if (Array.isArray(r?.data)) setUsers(r.data); }),
-      api.get('/admin/products').then((r) => { if (Array.isArray(r?.data)) setProducts(r.data); }),
-      api.get('/admin/orders').then((r) => { if (Array.isArray(r?.data)) setOrders(r.data); }),
+      api.get('/admin/stats').then((r) => {
+        if (r?.data?.revenue !== undefined) {
+          const catData =
+            r.data.byCategory ||
+            r.data.breakdown?.map((b) => ({ category: b._id, count: b.count })) ||
+            FALLBACK_STATS.byCategory;
+          setStats({ ...r.data, byCategory: catData });
+        }
+      }),
+      api.get('/admin/users').then((r) => {
+        if (Array.isArray(r?.data) && r.data.length > 0) setUsers(r.data);
+      }),
+      api.get('/admin/products').then((r) => {
+        if (Array.isArray(r?.data) && r.data.length > 0) setProducts(r.data);
+      }),
+      api.get('/admin/orders').then((r) => {
+        if (Array.isArray(r?.data) && r.data.length > 0) setOrders(r.data);
+      }),
     ])
       .catch(() => {
         setStats(FALLBACK_STATS);
         setProducts(MOCK_PRODUCTS);
+        setUsers(FALLBACK_USERS);
+        setOrders(FALLBACK_ORDERS);
       })
       .finally(() => setLoading(false));
   };
+
 
   useEffect(() => {
     loadAll();
@@ -213,12 +297,15 @@ export default function AdminDashboard() {
                         <span className={`role-badge role-${u.role}`}>{u.role}</span>
                       </td>
                       <td>
-                        {new Date(u.createdAt).toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
+                        {u.createdAt && !isNaN(new Date(u.createdAt).getTime())
+                          ? new Date(u.createdAt).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                          : 'Jan 2026'}
                       </td>
+
                       <td>
                         <span className={`status-pill ${u.isBlocked ? 'status-cancelled' : 'status-delivered'}`}>
                           {u.isBlocked ? 'Blocked' : 'Active'}
@@ -315,12 +402,15 @@ export default function AdminDashboard() {
                         <strong>{money(o.total)}</strong>
                       </td>
                       <td>
-                        {new Date(o.createdAt).toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
+                        {o.createdAt && !isNaN(new Date(o.createdAt).getTime())
+                          ? new Date(o.createdAt).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                          : 'Recent'}
                       </td>
+
                     </tr>
                   ))}
                 </tbody>
