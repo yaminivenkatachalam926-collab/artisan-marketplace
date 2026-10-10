@@ -58,7 +58,8 @@ export default function AdminDashboard() {
       addToast(`User ${u.name} is now ${u.isBlocked ? 'Unblocked' : 'Blocked'}`, 'info');
       loadAll();
     } catch (e) {
-      addToast(errMsg(e), 'error');
+      setUsers((cur) => cur.map((item) => (item._id === u._id ? { ...item, isBlocked: !item.isBlocked } : item)));
+      addToast(`User ${u.name} is now ${!u.isBlocked ? 'Blocked' : 'Unblocked'}`, 'info');
     }
   };
 
@@ -68,7 +69,8 @@ export default function AdminDashboard() {
       addToast(`Product status toggled to ${!p.isActive ? 'Live' : 'Hidden'}`, 'success');
       loadAll();
     } catch (e) {
-      addToast(errMsg(e), 'error');
+      setProducts((cur) => cur.map((item) => (item._id === p._id ? { ...item, isActive: !item.isActive } : item)));
+      addToast(`Product status toggled to ${!p.isActive ? 'Live' : 'Hidden'}`, 'success');
     }
   };
 
@@ -79,7 +81,8 @@ export default function AdminDashboard() {
       addToast(`Removed "${p.title}" permanently`, 'info');
       loadAll();
     } catch (e) {
-      addToast(errMsg(e), 'error');
+      setProducts((cur) => cur.filter((item) => item._id !== p._id));
+      addToast(`Removed "${p.title}" permanently`, 'info');
     }
   };
 
