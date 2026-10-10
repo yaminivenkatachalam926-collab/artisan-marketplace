@@ -62,8 +62,12 @@ export default function Navbar() {
 
           {user ? (
             <div className="nav-user-cluster">
+              <div className="nav-user-badge" title={`Signed in as ${user.email}`}>
+                <span className="nav-user-name">{user.name}</span>
+                <span className="nav-user-email">✉️ {user.email}</span>
+              </div>
               <span className={`role-badge role-${user.role}`}>
-                {user.role === 'artisan' ? 'Maker' : user.role === 'admin' ? 'Admin' : 'Member'}
+                {user.role === 'artisan' ? '🏺 Maker' : user.role === 'admin' ? '🛡️ Admin' : '🛍️ Buyer'}
               </span>
               <NavLink to={home} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 {user.role === 'customer' ? 'My Orders' : 'Dashboard'}
@@ -71,7 +75,7 @@ export default function Navbar() {
               <button
                 type="button"
                 className="btn-logout"
-                title={`Signed in as ${user.name}`}
+                title={`Signed in as ${user.email}`}
                 onClick={() => {
                   logout();
                   nav('/');

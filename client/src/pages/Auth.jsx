@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { errMsg } from '../api';
 
-const homeFor = (u) => (u.role === 'artisan' ? '/artisan' : u.role === 'admin' ? '/admin' : '/shop');
+const homeFor = (u) => (u.role === 'artisan' ? '/artisan' : u.role === 'admin' ? '/admin' : '/orders');
 
 export function Login() {
   const { login } = useAuth();
@@ -20,21 +20,7 @@ export function Login() {
     setBusy(true);
     try {
       const u = await login(f.email, f.password);
-      addToast(`Welcome back, ${u.name}!`, 'success');
-      nav(homeFor(u));
-    } catch (x) {
-      setErr(errMsg(x));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const quickLoginAs = async (email, password) => {
-    setErr('');
-    setBusy(true);
-    try {
-      const u = await login(email, password);
-      addToast(`Logged in as ${u.name} (${u.role})`, 'success');
+      addToast(`Welcome back, ${u.name}! (Signed in as ${u.email})`, 'success');
       nav(homeFor(u));
     } catch (x) {
       setErr(errMsg(x));
@@ -48,43 +34,11 @@ export function Login() {
       <div className="panel auth-panel">
         <div className="auth-header">
           <span className="auth-icon">🏺</span>
-          <h1>Welcome Back</h1>
-          <p className="muted">Log in to manage your workshop or track your handcrafted orders</p>
+          <h1>Sign In to Kaivinai</h1>
+          <p className="muted">Enter your email and password to access your account</p>
         </div>
 
         {err && <div className="error-banner">{err}</div>}
-
-        {/* 1-Click Demo Login Shortcuts */}
-        <div className="quick-demo-logins">
-          <span className="quick-demo-title">⚡ Instant Demo Sign-in:</span>
-          <div className="demo-btn-row">
-            <button
-              type="button"
-              className="btn btn-demo btn-demo-artisan"
-              onClick={() => quickLoginAs('meena@artisan.local', 'Artisan@123')}
-            >
-              🏺 Artisan (Meena Devi)
-            </button>
-            <button
-              type="button"
-              className="btn btn-demo btn-demo-admin"
-              onClick={() => quickLoginAs('admin@artisan.local', 'Admin@12345')}
-            >
-              🛡️ Admin
-            </button>
-            <button
-              type="button"
-              className="btn btn-demo btn-demo-customer"
-              onClick={() => quickLoginAs('rahul@customer.local', 'Customer@123')}
-            >
-              🛍️ Customer (Rahul)
-            </button>
-          </div>
-        </div>
-
-        <div className="auth-divider">
-          <span>or sign in with email</span>
-        </div>
 
         <form onSubmit={handleLogin} className="auth-form">
           <label className="form-label">
@@ -112,7 +66,7 @@ export function Login() {
           </label>
 
           <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign In'}
+            {busy ? 'Verifying credentials…' : 'Sign In'}
           </button>
         </form>
 
@@ -147,7 +101,7 @@ export function Register() {
     setBusy(true);
     try {
       const u = await register(f);
-      addToast(`Account created! Welcome, ${u.name}!`, 'success');
+      addToast(`Account created successfully! Welcome, ${u.name}! (Email: ${u.email})`, 'success');
       nav(homeFor(u));
     } catch (x) {
       setErr(errMsg(x));

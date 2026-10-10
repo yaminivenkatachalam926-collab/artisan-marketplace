@@ -4,6 +4,59 @@ import api from '../api';
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
+const ACCOUNTS_STORAGE_KEY = 'kaivinai_user_accounts';
+
+const DEFAULT_ACCOUNTS = [
+  {
+    _id: 'seed_cust_01',
+    name: 'Rahul Sharma',
+    email: 'rahul@customer.local',
+    password: 'Customer@123',
+    role: 'customer',
+    location: 'Bengaluru, Karnataka',
+  },
+  {
+    _id: 'seed_art_01',
+    name: 'Meena Devi',
+    email: 'meena@artisan.local',
+    password: 'Artisan@123',
+    role: 'artisan',
+    craft: 'Palm-leaf Basketry & Grass Weaving',
+    location: 'Erode, Tamil Nadu',
+    community: 'Kaveri Women Weavers Collective',
+    bio: 'Third-generation weaver passionate about preserving sustainable palm leaf craft.',
+  },
+  {
+    _id: 'seed_admin_01',
+    name: 'Platform Administrator',
+    email: 'admin@artisan.local',
+    password: 'Admin@12345',
+    role: 'admin',
+    location: 'New Delhi, India',
+  },
+];
+
+function getLocalAccounts() {
+  try {
+    const raw = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(DEFAULT_ACCOUNTS));
+      return DEFAULT_ACCOUNTS;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_ACCOUNTS;
+  } catch (e) {
+    return DEFAULT_ACCOUNTS;
+  }
+}
+
+function saveLocalAccount(user) {
+  const list = getLocalAccounts();
+  const filtered = list.filter((u) => u.email.toLowerCase() !== user.email.toLowerCase());
+  const updated = [...filtered, user];
+  localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,18 +65,16 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('token');
     const cachedUser = localStorage.getItem('auth_user');
 
-    if (!token) {
+    if (!token || !cachedUser) {
       setLoading(false);
       return;
     }
 
-    if (cachedUser) {
-      try {
-        setUser(JSON.parse(cachedUser));
-      } catch (e) {}
-    }
+    try {
+      setUser(JSON.parse(cachedUser));
+    } catch (e) {}
 
-    // Attempt live token verification if backend is available
+    // Verify token with backend if online
     api
       .get('/auth/me')
       .then((r) => {
@@ -33,10 +84,7 @@ export function AuthProvider({ children }) {
         }
       })
       .catch(() => {
-        // If live API is offline or returns 404/405, keep cached user session
-        if (!cachedUser) {
-          localStorage.removeItem('token');
-        }
+        // Keep cached user if backend is offline or static SPA
       })
       .finally(() => setLoading(false));
   }, []);
@@ -49,45 +97,104 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
+    const emailNorm = (email || '').trim().toLowerCase();
+    if (!emailNorm) throw new Error('Please enter your email address.');
+    if (!password) throw new Error('Please enter your password.');
+
+    // 1. Try real backend API if online
     try {
-      const res = await api.post('/auth/login', { email, password });
+      const res = await api.post('/auth/login', { email: emailNorm, password });
+      saveLocalAccount({ ...res.data.user, password });
       return finish(res.data);
     } catch (err) {
-      // Graceful demo login if backend is not yet hosted or returns 405
-      if (err.response?.status === 405 || err.response?.status === 404 || !err.response) {
-        const role = email.includes('artisan') ? 'artisan' : email.includes('admin') ? 'admin' : 'customer';
-        const demoUser = {
-          _id: 'usr_' + Date.now(),
-          name: email.split('@')[0],
-          email,
-          role,
-          location: 'Tamil Nadu, India',
-          craft: role === 'artisan' ? 'Handloom & Pottery' : undefined,
-        };
-        return finish({ token: 'jwt_demo_' + Date.now(), user: demoUser });
+      // If error is 400 or 401 from live backend
+      if (err.response?.status === 400 || err.response?.status === 401) {
+        throw new Error(err.response?.data?.message || 'Wrong email or password! Please check again.');
       }
-      throw err;
+
+      // If backend is 405/404 or offline: check local accounts
+      const accounts = getLocalAccounts();
+      const match = accounts.find((u) => u.email.toLowerCase() === emailNorm);
+
+      if (!match) {
+        throw new Error(`Wrong email! No account found for "${email.trim()}". Please register first.`);
+      }
+
+      if (match.password !== password) {
+        throw new Error(`Wrong password! The password you entered for "${email.trim()}" is incorrect.`);
+      }
+
+      const sessionUser = {
+        _id: match._id,
+        name: match.name,
+        email: match.email,
+        role: match.role,
+        craft: match.craft,
+        location: match.location,
+        community: match.community,
+        bio: match.bio,
+      };
+
+      return finish({
+        token: 'token_' + Date.now().toString(36),
+        user: sessionUser,
+      });
     }
   };
 
   const register = async (form) => {
+    const emailNorm = (form.email || '').trim().toLowerCase();
+    if (!form.name || !form.name.trim()) throw new Error('Please enter your full name.');
+    if (!emailNorm) throw new Error('Please enter your email address.');
+    if (!form.password || form.password.length < 6) throw new Error('Password must be at least 6 characters.');
+
+    // 1. Try real backend API if online
     try {
-      const res = await api.post('/auth/register', form);
+      const res = await api.post('/auth/register', {
+        ...form,
+        email: emailNorm,
+      });
+      saveLocalAccount({ ...res.data.user, password: form.password });
       return finish(res.data);
     } catch (err) {
-      // Graceful demo register if backend is not yet hosted or returns 405
-      if (err.response?.status === 405 || err.response?.status === 404 || !err.response) {
-        const demoUser = {
-          _id: 'usr_' + Date.now(),
-          name: form.name,
-          email: form.email,
-          role: form.role || 'customer',
-          craft: form.craft || '',
-          location: form.location || 'India',
-        };
-        return finish({ token: 'jwt_demo_' + Date.now(), user: demoUser });
+      // If backend returned genuine error (e.g. Email already registered)
+      if (err.response?.status === 400) {
+        throw new Error(err.response?.data?.message || 'Email already registered!');
       }
-      throw err;
+
+      // If backend is 405/404 or offline:
+      const accounts = getLocalAccounts();
+      const existing = accounts.find((u) => u.email.toLowerCase() === emailNorm);
+      if (existing) {
+        throw new Error(`This email (${form.email.trim()}) is already registered! Please sign in with your password.`);
+      }
+
+      const newUser = {
+        _id: 'usr_' + Date.now().toString(36),
+        name: form.name.trim(),
+        email: emailNorm,
+        password: form.password,
+        role: form.role || 'customer',
+        craft: form.craft || (form.role === 'artisan' ? 'Traditional Craft' : undefined),
+        location: form.location || 'India',
+        community: form.role === 'artisan' ? 'Artisan Guild' : undefined,
+      };
+
+      saveLocalAccount(newUser);
+
+      const sessionUser = {
+        _id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        craft: newUser.craft,
+        location: newUser.location,
+      };
+
+      return finish({
+        token: 'token_' + Date.now().toString(36),
+        user: sessionUser,
+      });
     }
   };
 

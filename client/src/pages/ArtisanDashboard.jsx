@@ -742,10 +742,13 @@ export default function ArtisanDashboard() {
     <div className="artisan-dashboard-page container">
       <div className="dashboard-header-banner">
         <div>
-          <span className="dashboard-role-badge">Artisan Workshop Control Center</span>
+          <span className="dashboard-role-badge">🏺 Verified Master Artisan</span>
           <h1>Welcome, {user?.name}</h1>
+          <p className="artisan-email-lead" style={{ margin: '6px 0', fontSize: '1rem', color: '#111D4A' }}>
+            ✉️ Logged in Artisan Email: <strong>{user?.email}</strong>
+          </p>
           <p className="muted">
-            📍 {[user?.craft, user?.location].filter(Boolean).join(' · ')}
+            📍 {[user?.craft, user?.location].filter(Boolean).join(' · ') || 'Traditional Indian Craftsperson'}
           </p>
         </div>
       </div>

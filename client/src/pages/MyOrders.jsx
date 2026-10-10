@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api, { errMsg } from '../api';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { money } from '../components/ProductCard';
 
 const ORDER_STEPS = ['placed', 'packed', 'shipped', 'delivered'];
 
 export default function MyOrders() {
+  const { user } = useAuth();
   const [orders, setOrders] = useState(null);
   const [err, setErr] = useState('');
   const { addToast } = useToast();
@@ -55,6 +57,20 @@ export default function MyOrders() {
 
   return (
     <div className="orders-page container">
+      {/* Customer Account Header Card */}
+      <div className="customer-account-header-card">
+        <div className="account-avatar-circle">
+          {(user?.name || 'C').charAt(0).toUpperCase()}
+        </div>
+        <div className="account-details-col">
+          <span className="account-type-tag">🛍️ Customer Account (Craft Patron)</span>
+          <h2>{user?.name || 'Customer'}</h2>
+          <div className="account-email-row">
+            <span>✉️ Logged in Email ID:</span> <strong>{user?.email}</strong>
+          </div>
+        </div>
+      </div>
+
       <div className="orders-header">
         <h1>My Order History</h1>
         <p className="muted">Direct shipments from community artisan workshops</p>

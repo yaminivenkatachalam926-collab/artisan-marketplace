@@ -283,16 +283,81 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
 .nav-user-cluster {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   background: rgba(255, 255, 255, 0.08);
-  padding: 4px 6px 4px 12px;
+  padding: 4px 12px;
   border-radius: var(--radius-full);
 }
 
-.nav-guest-cluster {
+.nav-user-badge {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.nav-user-name {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.nav-user-email {
+  color: #fef3c7;
+  font-size: 0.72rem;
+  opacity: 0.9;
+}
+
+.customer-account-header-card {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 20px;
+  background: #ffffff;
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 28px;
+}
+
+.account-avatar-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #111d4a, #1f3175);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(17, 29, 74, 0.2);
+}
+
+.account-details-col h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #111d4a;
+  margin: 4px 0;
+}
+
+.account-type-tag {
+  display: inline-block;
+  background: #ecfdf5;
+  color: #059669;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  margin-bottom: 4px;
+}
+
+.account-email-row {
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+.account-email-row strong {
+  color: #111d4a;
 }
 
 .role-badge {
