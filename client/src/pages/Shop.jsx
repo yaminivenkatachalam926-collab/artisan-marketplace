@@ -2,10 +2,41 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../api';
 import ProductCard from '../components/ProductCard';
+import { MOCK_PRODUCTS, MOCK_CATEGORIES } from '../mockData';
+
+function filterMockProducts(f) {
+  let list = [...MOCK_PRODUCTS];
+  if (f.category && f.category !== 'All') {
+    list = list.filter((p) => p.category === f.category);
+  }
+  if (f.q && f.q.trim()) {
+    const q = f.q.toLowerCase().trim();
+    list = list.filter((p) =>
+      p.title.toLowerCase().includes(q) ||
+      p.category.toLowerCase().includes(q) ||
+      p.materials?.toLowerCase().includes(q) ||
+      p.keywords?.some((k) => k.toLowerCase().includes(q))
+    );
+  }
+  if (f.minPrice) {
+    list = list.filter((p) => p.price >= Number(f.minPrice));
+  }
+  if (f.maxPrice) {
+    list = list.filter((p) => p.price <= Number(f.maxPrice));
+  }
+  if (f.sort === 'price-asc') {
+    list.sort((a, b) => a.price - b.price);
+  } else if (f.sort === 'price-desc') {
+    list.sort((a, b) => b.price - a.price);
+  } else if (f.sort === 'popular') {
+    list.sort((a, b) => (b.sold || 0) - (a.sold || 0));
+  }
+  return { products: list, total: list.length, pages: 1 };
+}
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [meta, setMeta] = useState({ categories: [] });
+  const [meta, setMeta] = useState({ categories: MOCK_CATEGORIES.filter((c) => c !== 'All') });
 
   const initialQ = searchParams.get('q') || '';
   const initialCategory = searchParams.get('category') || 'All';
@@ -19,8 +50,14 @@ export default function Shop() {
     page: 1,
   });
 
-  const [data, setData] = useState({ products: [], total: 0, pages: 1 });
-  const [busy, setBusy] = useState(true);
+  const [data, setData] = useState(() => filterMockProducts({
+    q: initialQ,
+    category: initialCategory,
+    minPrice: '',
+    maxPrice: '',
+    sort: 'newest',
+  }));
+  const [busy, setBusy] = useState(false);
 
   // Sync when URL parameters change externally (e.g. from navbar search or home page)
   useEffect(() => {
@@ -35,7 +72,14 @@ export default function Shop() {
   }, [searchParams]);
 
   useEffect(() => {
-    api.get('/products/meta').then((r) => setMeta(r.data)).catch(() => {});
+    api
+      .get('/products/meta')
+      .then((r) => {
+        if (r.data && Array.isArray(r.data.categories)) {
+          setMeta(r.data);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -43,8 +87,16 @@ export default function Shop() {
     const t = setTimeout(() => {
       api
         .get('/products', { params: { ...f, limit: 12 } })
-        .then((r) => setData(r.data))
-        .catch(() => {})
+        .then((r) => {
+          if (r?.data && Array.isArray(r.data.products)) {
+            setData(r.data);
+          } else {
+            setData(filterMockProducts(f));
+          }
+        })
+        .catch(() => {
+          setData(filterMockProducts(f));
+        })
         .finally(() => setBusy(false));
     }, 250);
     return () => clearTimeout(t);
@@ -221,7 +273,7 @@ export default function Shop() {
               <div className="spinner"></div>
               <p>Loading pieces directly from village makers…</p>
             </div>
-          ) : data.products.length > 0 ? (
+          ) : Array.isArray(data?.products) && data.products.length > 0 ? (
             <div className="grid">
               {data.products.map((p) => (
                 <ProductCard key={p._id} p={p} />

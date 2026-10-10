@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { money, desc } from '../components/ProductCard';
+import { MOCK_PRODUCTS } from '../mockData';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -12,8 +13,15 @@ export default function ProductDetail() {
   const { user } = useAuth();
   const { addToast } = useToast();
 
-  const [p, setP] = useState(null);
-  const [meta, setMeta] = useState({ languages: {} });
+  const [p, setP] = useState(() => MOCK_PRODUCTS.find((item) => item._id === id) || MOCK_PRODUCTS[0]);
+  const [meta, setMeta] = useState({
+    languages: {
+      en: 'English',
+      ta: 'தமிழ் (Tamil)',
+      hi: 'हिन्दी (Hindi)',
+      bn: 'বাংলা (Bengali)',
+    },
+  });
   const [lang, setLang] = useState('en');
   const [img, setImg] = useState(0);
   const [qty, setQty] = useState(1);
@@ -22,12 +30,21 @@ export default function ProductDetail() {
   useEffect(() => {
     api
       .get(`/products/${id}`)
-      .then((r) => setP(r.data))
-      .catch(() => setP(false));
+      .then((r) => {
+        if (r?.data && typeof r.data === 'object' && r.data.title) {
+          setP(r.data);
+        }
+      })
+      .catch(() => {
+        const fallback = MOCK_PRODUCTS.find((item) => item._id === id) || MOCK_PRODUCTS[0];
+        setP(fallback);
+      });
 
     api
       .get('/products/meta')
-      .then((r) => setMeta(r.data))
+      .then((r) => {
+        if (r?.data?.languages) setMeta(r.data);
+      })
       .catch(() => {});
   }, [id]);
 

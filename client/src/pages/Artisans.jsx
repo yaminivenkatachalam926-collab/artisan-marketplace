@@ -1,28 +1,42 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import { MOCK_ARTISANS } from '../mockData';
 
 export default function Artisans() {
-  const [list, setList] = useState([]);
+  const [list, setList] = useState(MOCK_ARTISANS);
   const [filterQuery, setFilterQuery] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     api
       .get('/artisans')
-      .then((r) => setList(r.data))
-      .catch(() => {})
+      .then((r) => {
+        if (r?.data && Array.isArray(r.data) && r.data.length > 0) {
+          setList(r.data);
+        } else {
+          setList(MOCK_ARTISANS);
+        }
+      })
+      .catch(() => {
+        setList(MOCK_ARTISANS);
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = list.filter((a) => {
+  const safeList = Array.isArray(list) ? list : MOCK_ARTISANS;
+  const filtered = safeList.filter((a) => {
     if (!filterQuery.trim()) return true;
     const q = filterQuery.toLowerCase();
+    const name = a?.name || '';
+    const craft = a?.craft || '';
+    const loc = a?.location || '';
+    const comm = a?.community || '';
     return (
-      a.name.toLowerCase().includes(q) ||
-      (a.craft && a.craft.toLowerCase().includes(q)) ||
-      (a.location && a.location.toLowerCase().includes(q)) ||
-      (a.community && a.community.toLowerCase().includes(q))
+      name.toLowerCase().includes(q) ||
+      craft.toLowerCase().includes(q) ||
+      loc.toLowerCase().includes(q) ||
+      comm.toLowerCase().includes(q)
     );
   });
 
@@ -59,9 +73,9 @@ export default function Artisans() {
               </div>
               <div className="card-inner-body">
                 <div className="avatar-wrap">
-                  <span className="artisan-directory-avatar">{a.name.charAt(0)}</span>
+                  <span className="artisan-directory-avatar">{(a?.name || 'A').charAt(0)}</span>
                 </div>
-                <h3>{a.name}</h3>
+                <h3>{a?.name || 'Artisan'}</h3>
                 <p className="location-pin">📍 {a.location || 'Rural India'}</p>
                 {a.community && <p className="community-tag">Collective: {a.community}</p>}
                 <p className="bio-snippet">{a.bio || 'Generational master craftsperson committed to authentic, sustainable creation.'}</p>

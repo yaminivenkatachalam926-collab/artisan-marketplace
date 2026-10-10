@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import ProductCard from '../components/ProductCard';
+import { MOCK_PRODUCTS, MOCK_ARTISANS } from '../mockData';
 
 const CATEGORY_CHIPS = [
   { name: 'Basketry', icon: '🧺', count: 'Palm-leaf & Grass' },
@@ -13,9 +14,9 @@ const CATEGORY_CHIPS = [
 ];
 
 export default function Home() {
-  const [products, setProducts] = useState([]);
-  const [artisans, setArtisans] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState(MOCK_PRODUCTS.slice(0, 8));
+  const [artisans, setArtisans] = useState(MOCK_ARTISANS.slice(0, 3));
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -23,10 +24,20 @@ export default function Home() {
       api.get('/artisans'),
     ])
       .then(([pRes, aRes]) => {
-        setProducts(pRes.data.products || []);
-        setArtisans((aRes.data || []).slice(0, 3));
+        const pList = pRes?.data?.products;
+        if (Array.isArray(pList) && pList.length > 0) {
+          setProducts(pList);
+        }
+        const aList = aRes?.data;
+        if (Array.isArray(aList) && aList.length > 0) {
+          setArtisans(aList.slice(0, 3));
+        }
       })
-      .catch(() => {})
+      .catch(() => {
+        // Fall back gracefully to mock craft data
+        setProducts(MOCK_PRODUCTS.slice(0, 8));
+        setArtisans(MOCK_ARTISANS.slice(0, 3));
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -197,7 +208,7 @@ export default function Home() {
       </section>
 
       {/* Makers Spotlight */}
-      {artisans.length > 0 && (
+      {Array.isArray(artisans) && artisans.length > 0 && (
         <section className="makers-section">
           <div className="section-head">
             <div>
@@ -211,10 +222,10 @@ export default function Home() {
             {artisans.map((a) => (
               <Link key={a._id} to={`/artisans/${a._id}`} className="maker-card">
                 <div className="maker-avatar-banner">
-                  <span className="maker-big-avatar">{a.name.charAt(0)}</span>
+                  <span className="maker-big-avatar">{(a.name || 'Artisan').charAt(0)}</span>
                 </div>
                 <div className="maker-card-body">
-                  <h3>{a.name}</h3>
+                  <h3>{a.name || 'Master Artisan'}</h3>
                   <p className="maker-craft-tag">{a.craft || 'Traditional Artisan'}</p>
                   <p className="maker-location-text">📍 {a.location || 'Rural India'}</p>
                   <p className="maker-bio-preview">{a.bio || 'Preserving living traditions.'}</p>

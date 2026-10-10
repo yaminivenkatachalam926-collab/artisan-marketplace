@@ -2,16 +2,27 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../api';
 import ProductCard from '../components/ProductCard';
+import { MOCK_ARTISANS, MOCK_PRODUCTS } from '../mockData';
 
 export default function ArtisanProfile() {
   const { id } = useParams();
-  const [d, setD] = useState(null);
+  const [d, setD] = useState(() => {
+    const art = MOCK_ARTISANS.find((a) => a._id === id) || MOCK_ARTISANS[0];
+    const prods = MOCK_PRODUCTS.filter((p) => p.artisan?._id === art._id || p.artisan === art._id);
+    return { artisan: art, products: prods.length ? prods : MOCK_PRODUCTS.slice(0, 3) };
+  });
 
   useEffect(() => {
     api
       .get(`/artisans/${id}`)
-      .then((r) => setD(r.data))
-      .catch(() => setD(false));
+      .then((r) => {
+        if (r?.data?.artisan) setD(r.data);
+      })
+      .catch(() => {
+        const art = MOCK_ARTISANS.find((a) => a._id === id) || MOCK_ARTISANS[0];
+        const prods = MOCK_PRODUCTS.filter((p) => p.artisan?._id === art._id || p.artisan === art._id);
+        setD({ artisan: art, products: prods.length ? prods : MOCK_PRODUCTS.slice(0, 3) });
+      });
   }, [id]);
 
   if (d === null) {
