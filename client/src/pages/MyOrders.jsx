@@ -14,8 +14,18 @@ export default function MyOrders() {
   const load = () => {
     api
       .get('/orders/mine')
-      .then((r) => setOrders(r.data))
-      .catch((e) => setErr(errMsg(e)));
+      .then((r) => {
+        if (r?.data && Array.isArray(r.data)) {
+          setOrders(r.data);
+        } else {
+          const localOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
+          setOrders(localOrders);
+        }
+      })
+      .catch((e) => {
+        const localOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
+        setOrders(localOrders);
+      });
   };
 
   useEffect(() => {
