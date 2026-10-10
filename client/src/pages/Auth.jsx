@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { errMsg } from '../api';
@@ -10,17 +10,38 @@ export function Login() {
   const { login } = useAuth();
   const { addToast } = useToast();
   const nav = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const initialRole = searchParams.get('role') || 'customer';
+  const [activeRole, setActiveRole] = useState(
+    ['customer', 'artisan', 'admin'].includes(initialRole) ? initialRole : 'customer'
+  );
+
   const [f, setF] = useState({ email: '', password: '' });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const r = searchParams.get('role');
+    if (r && ['customer', 'artisan', 'admin'].includes(r)) {
+      setActiveRole(r);
+    }
+  }, [searchParams]);
+
+  const handleRoleChange = (role) => {
+    setActiveRole(role);
+    setErr('');
+    setSearchParams({ role });
+  };
 
   const handleLogin = async (e) => {
     e?.preventDefault?.();
     setErr('');
     setBusy(true);
+
     try {
-      const u = await login(f.email, f.password);
-      addToast(`Welcome back, ${u.name}! (Signed in as ${u.email})`, 'success');
+      const u = await login(f.email, f.password, activeRole);
+      addToast(`Signed in successfully! Welcome, ${u.name}! (Email: ${u.email})`, 'success');
       nav(homeFor(u));
     } catch (x) {
       setErr(errMsg(x));
@@ -32,23 +53,77 @@ export function Login() {
   return (
     <div className="auth-wrapper container">
       <div className="panel auth-panel">
+        {/* 3 Dedicated Role Login Tabs */}
+        <div className="separated-login-tabs">
+          <button
+            type="button"
+            className={`sep-login-tab ${activeRole === 'customer' ? 'active' : ''}`}
+            onClick={() => handleRoleChange('customer')}
+          >
+            <span className="sep-tab-icon">🛍️</span>
+            <span className="sep-tab-label">Customer Login</span>
+          </button>
+
+          <button
+            type="button"
+            className={`sep-login-tab ${activeRole === 'artisan' ? 'active' : ''}`}
+            onClick={() => handleRoleChange('artisan')}
+          >
+            <span className="sep-tab-icon">🏺</span>
+            <span className="sep-tab-label">Artisan Login</span>
+          </button>
+
+          <button
+            type="button"
+            className={`sep-login-tab ${activeRole === 'admin' ? 'active' : ''}`}
+            onClick={() => handleRoleChange('admin')}
+          >
+            <span className="sep-tab-icon">🛡️</span>
+            <span className="sep-tab-label">Admin Login</span>
+          </button>
+        </div>
+
         <div className="auth-header">
-          <span className="auth-icon">🏺</span>
-          <h1>Sign In to Kaivinai</h1>
-          <p className="muted">Enter your email and password to access your account</p>
+          <span className="auth-icon">
+            {activeRole === 'customer' ? '🛍️' : activeRole === 'artisan' ? '🏺' : '🛡️'}
+          </span>
+          <h1>
+            {activeRole === 'customer'
+              ? 'Customer Sign In'
+              : activeRole === 'artisan'
+              ? 'Artisan Workshop Sign In'
+              : 'Admin Portal Sign In'}
+          </h1>
+          <p className="muted">
+            {activeRole === 'customer'
+              ? 'Sign in with your buyer account to access your orders and handcrafted bag'
+              : activeRole === 'artisan'
+              ? 'Sign in with your artisan account to manage your listings, AI catalog & sales'
+              : 'Enter your administrator credentials to manage platform governance'}
+          </p>
         </div>
 
         {err && <div className="error-banner">{err}</div>}
 
         <form onSubmit={handleLogin} className="auth-form">
           <label className="form-label">
-            Email Address
+            {activeRole === 'customer'
+              ? 'Customer Email Address'
+              : activeRole === 'artisan'
+              ? 'Artisan Email Address'
+              : 'Admin Email Address'}
             <input
               type="email"
               required
               value={f.email}
               onChange={(e) => setF({ ...f, email: e.target.value })}
-              placeholder="e.g. you@example.com"
+              placeholder={
+                activeRole === 'customer'
+                  ? 'e.g. yamini@gmail.com'
+                  : activeRole === 'artisan'
+                  ? 'e.g. meena@artisan.local'
+                  : 'e.g. admin@artisan.local'
+              }
               className="form-input"
             />
           </label>
@@ -66,13 +141,37 @@ export function Login() {
           </label>
 
           <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={busy}>
-            {busy ? 'Verifying credentials…' : 'Sign In'}
+            {busy
+              ? 'Verifying…'
+              : activeRole === 'customer'
+              ? 'Sign In as Customer'
+              : activeRole === 'artisan'
+              ? 'Sign In to Artisan Workshop'
+              : 'Access Admin Dashboard'}
           </button>
         </form>
 
-        <p className="auth-footer-text">
-          New to Kaivinai? <Link to="/register">Create an account</Link>
-        </p>
+        <div className="auth-footer-block">
+          {activeRole === 'customer' && (
+            <p className="auth-footer-text">
+              Don't have a Customer account?{' '}
+              <Link to="/register?role=customer">Register as a Buyer</Link>
+            </p>
+          )}
+
+          {activeRole === 'artisan' && (
+            <p className="auth-footer-text">
+              Want to sell your handcrafted pieces?{' '}
+              <Link to="/register?role=artisan">Register as an Artisan Maker</Link>
+            </p>
+          )}
+
+          {activeRole === 'admin' && (
+            <p className="auth-footer-text muted-mini">
+              🔒 Restricted access for platform administrators only.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -82,11 +181,15 @@ export function Register() {
   const { register } = useAuth();
   const { addToast } = useToast();
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const initialRole = searchParams.get('role') === 'artisan' ? 'artisan' : 'customer';
+
   const [f, setF] = useState({
     name: '',
     email: '',
     password: '',
-    role: 'customer',
+    role: initialRole,
     craft: '',
     location: '',
   });
@@ -99,9 +202,10 @@ export function Register() {
     e.preventDefault();
     setErr('');
     setBusy(true);
+
     try {
       const u = await register(f);
-      addToast(`Account created successfully! Welcome, ${u.name}! (Email: ${u.email})`, 'success');
+      addToast(`Account created! Welcome, ${u.name}! (Email: ${u.email})`, 'success');
       nav(homeFor(u));
     } catch (x) {
       setErr(errMsg(x));
@@ -127,7 +231,7 @@ export function Register() {
             className={`role-switch-btn ${f.role === 'customer' ? 'active' : ''}`}
             onClick={() => setF({ ...f, role: 'customer' })}
           >
-            🛍️ I want to Buy Crafts
+            🛍️ I want to Buy Crafts (Customer)
           </button>
           <button
             type="button"
@@ -145,7 +249,7 @@ export function Register() {
               required
               value={f.name}
               onChange={setKey('name')}
-              placeholder="e.g. Priyadarshini Rao"
+              placeholder={f.role === 'artisan' ? 'e.g. Meena Devi' : 'e.g. Yamini Venkatachalam'}
               className="form-input"
             />
           </label>
@@ -157,7 +261,7 @@ export function Register() {
               required
               value={f.email}
               onChange={setKey('email')}
-              placeholder="e.g. priya@example.com"
+              placeholder={f.role === 'artisan' ? 'e.g. meena@artisan.local' : 'e.g. yamini@gmail.com'}
               className="form-input"
             />
           </label>
@@ -202,12 +306,17 @@ export function Register() {
           )}
 
           <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={busy}>
-            {busy ? 'Creating account…' : f.role === 'artisan' ? 'Register as Artisan' : 'Create Customer Account'}
+            {busy
+              ? 'Creating account…'
+              : f.role === 'artisan'
+              ? 'Register as Artisan Maker'
+              : 'Create Customer Account'}
           </button>
         </form>
 
         <p className="auth-footer-text">
-          Already registered? <Link to="/login">Sign in here</Link>
+          Already have an account?{' '}
+          <Link to={`/login?role=${f.role}`}>Sign in here</Link>
         </p>
       </div>
     </div>

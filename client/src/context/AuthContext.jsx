@@ -96,7 +96,7 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
-  const login = async (email, password) => {
+  const login = async (email, password, expectedRole = null) => {
     const emailNorm = (email || '').trim().toLowerCase();
     if (!emailNorm) throw new Error('Please enter your email address.');
     if (!password) throw new Error('Please enter your password.');
@@ -104,9 +104,25 @@ export function AuthProvider({ children }) {
     // 1. Try real backend API if online
     try {
       const res = await api.post('/auth/login', { email: emailNorm, password });
-      saveLocalAccount({ ...res.data.user, password });
+      const backendUser = res.data.user;
+
+      if (expectedRole && backendUser.role !== expectedRole) {
+        throw new Error(
+          expectedRole === 'customer'
+            ? `⚠️ This email (${backendUser.email}) is registered as an ${backendUser.role.toUpperCase()}, not a Customer/Buyer.`
+            : expectedRole === 'artisan'
+            ? `⚠️ This email (${backendUser.email}) is registered as a ${backendUser.role.toUpperCase()}, not an Artisan.`
+            : `⚠️ Access restricted. The account "${backendUser.email}" is not authorized for Admin access.`
+        );
+      }
+
+      saveLocalAccount({ ...backendUser, password });
       return finish(res.data);
     } catch (err) {
+      if (err.message && (err.message.includes('registered as') || err.message.includes('Access restricted'))) {
+        throw err;
+      }
+
       // If error is 400 or 401 from live backend
       if (err.response?.status === 400 || err.response?.status === 401) {
         throw new Error(err.response?.data?.message || 'Wrong email or password! Please check again.');
@@ -117,11 +133,21 @@ export function AuthProvider({ children }) {
       const match = accounts.find((u) => u.email.toLowerCase() === emailNorm);
 
       if (!match) {
-        throw new Error(`Wrong email! No account found for "${email.trim()}". Please register first.`);
+        throw new Error(`Wrong email! No account found for "${email.trim()}". Please check your email or register.`);
       }
 
       if (match.password !== password) {
         throw new Error(`Wrong password! The password you entered for "${email.trim()}" is incorrect.`);
+      }
+
+      if (expectedRole && match.role !== expectedRole) {
+        throw new Error(
+          expectedRole === 'customer'
+            ? `⚠️ This email (${match.email}) is registered as an ${match.role.toUpperCase()}, not a Customer/Buyer. Please switch to the Artisan/Admin tab above.`
+            : expectedRole === 'artisan'
+            ? `⚠️ This email (${match.email}) is registered as a ${match.role.toUpperCase()}, not an Artisan. Please switch to Customer Login above.`
+            : `⚠️ Access restricted. The account "${match.email}" is not authorized for Admin access.`
+        );
       }
 
       const sessionUser = {

@@ -41,11 +41,13 @@ export default function Footer() {
           <p className="footer-subtext">
             Supporting self-help groups, craft clusters, and indigenous women cooperatives across Tamil Nadu, Uttar Pradesh, West Bengal, and Karnataka.
           </p>
-          <div className="demo-credentials-box">
-            <span className="demo-tag">Quick Demo Logins</span>
-            <div className="demo-line"><strong>Artisan:</strong> meena@artisan.local / Artisan@123</div>
-            <div className="demo-line"><strong>Admin:</strong> admin@artisan.local / Admin@12345</div>
-            <div className="demo-line"><strong>Customer:</strong> rahul@customer.local / Customer@123</div>
+          <div className="demo-credentials-box" style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <span className="demo-tag" style={{ color: '#111d4a', fontWeight: '700', fontSize: '0.8rem', display: 'block', marginBottom: '8px' }}>Portals & Access</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <Link to="/login?role=customer" style={{ fontSize: '0.84rem' }}>🛍️ Customer Sign In</Link>
+              <Link to="/login?role=artisan" style={{ fontSize: '0.84rem' }}>🏺 Artisan Workshop Sign In</Link>
+              <Link to="/login?role=admin" style={{ fontSize: '0.84rem' }}>🛡️ Admin Governance Portal</Link>
+            </div>
           </div>
         </div>
       </div>
